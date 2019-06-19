@@ -1,0 +1,10 @@
+FROM golang:1.12.5
+
+RUN apt-get update && apt-get install -y whois
+
+RUN mkdir /app 
+ADD ./services /app/ 
+WORKDIR /app 
+
+RUN sh /app/requirements.txt
+RUN go build -o main . 

@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+  server_info_services:
+    container_name: server_info_services_local
+    restart: "no"
+    build:
+      context: .
+      dockerfile: ./docker/dockerfile-go
+    ports:
+      - "3000:3000"
+    command: "/app/main"
+    links:
+      - server_info_database_init
+
+  server_info_ui:
+    container_name: server_info_ui_local
+    restart: "no"
+    build:
+      context: .
+      dockerfile: ./docker/dockerfile-vue
+    ports:
+      - "80:80"
+    command: "nginx -g \"daemon off;\""
+    links:
+      - server_info_services
+
+  server_info_database:
+    image: cockroachdb/cockroach:v19.1.2
+    container_name: server_info_database_local
+    ports:
+      - "26257:26257"
+      - "8080:8080"
+    volumes:
+      - ./cockroach-data:/cockroach/cockroach-data
+    command: start --insecure --listen-addr=server_info_database
+
+  server_info_database_2:
+    image: cockroachdb/cockroach:v19.1.2
+    container_name: server_info_database_local_2
+    volumes:
+      - ./cockroach-data:/cockroach/cockroach-data
+    command: start --insecure --store=node2 --join=server_info_database:26257
+
+  server_info_database_3:
+    image: cockroachdb/cockroach:v19.1.2
+    container_name: server_info_database_local_3
+    volumes:
+      - ./cockroach-data:/cockroach/cockroach-data
+    command: start --insecure --store=node3 --join=server_info_database:26257
+
+  server_info_database_init:
+    image: cockroachdb/cockroach:v19.1.2
+    container_name: server_info_database_init_local
+    volumes:
+      - ./docker/cockroachdb/db-schema.sql:/cockroach/db-schema.sql
+      - ./docker/cockroachdb/init.sh:/cockroach/cockroach-init.sh
+    environment:
+      COCKROACH_USER: root
+    entrypoint: "/bin/bash"
+    command: /cockroach/cockroach-init.sh
+    links:
+      - server_info_database
